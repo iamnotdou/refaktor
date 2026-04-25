@@ -1,0 +1,133 @@
+---
+title: Jüri Stratejisi
+description: Pitch deck outline, anahtar mesajlar, Q&A hazırlığı
+---
+
+# Jüri Stratejisi
+
+Pitch ~5-7 dakika. Demo + slayt karışımı. **Hikayeyle** anlat — Ahmet Bey hep merkezde.
+
+## 10 Slayt
+
+### Slayt 1: Cover (5 sn)
+- Logo + slogan: "Faturanı dakikalar içinde nakte çevir"
+- Bi-Thongo Web3 Hackathon — FaturaChain — Nisan 2026
+
+### Slayt 2: Problem (30 sn)
+- "Türkiye'de 1.87 trilyon TL'lik faktoring pazarı var"
+- "Her yıl 100 milyar TL'lik ihracat faturası haftalarca bekliyor"
+- "Geleneksel faktoring %15-20 alıyor, banka kredisi %40-45 faiz"
+- "KOBİ'lerin %99'u erişemiyor"
+
+### Slayt 3: Ahmet Bey Hikayesi (1 dk)
+- Bursa'da tekstil fabrikası
+- Lidl 50.000€ fatura, 120 gün vade
+- Fabrikası nakit sıkışıyor, kredi alamıyor
+
+### Slayt 4: Çözüm (1 dk)
+- "Faturayı NFT'ye dönüştürüyoruz, 500 parçaya bölüyoruz"
+- "Açık pazar — yatırımcılar bid veriyor"
+- "İkincil piyasa — yatırımcı vade dolmadan satabilir"
+- "Smart contract aracılık ediyor — şeffaf, anlık"
+
+### Slayt 5: CANLI DEMO (2-3 dk) — EN ÖNEMLİ
+- Sadece bu slayt değil — ekran paylaşımı:
+  1. Ahmet faturayı yükler
+  2. Pazara listeler (95€)
+  3. Hans 95.8€'dan 120 alır → MATCH 95€'da
+  4. Sara 95.2€'dan 200 alır → MATCH 95€'da
+  5. Ahmet anında 30.500€ aldı (dashboard güncellenir)
+  6. (Hızlı geçiş) "60 gün sonra Hans ikincil satıyor"
+  7. Hans 97.5€'dan 60 satar → 150€ kar
+  8. (Hızlı) "120 gün sonra Lidl ödüyor, herkes payını alıyor"
+
+### Slayt 6: Mimari (30 sn)
+- Diyagram: Frontend ↔ Backend ↔ Smart Contract
+- "Hibrit order book — match off-chain, settlement on-chain"
+- "Polygon Amoy testnet'te canlı"
+- "Game theory ile mekanizma tasarlandı (yan dokümantasyonda)"
+
+### Slayt 7: Risk Yönetimi (30 sn)
+- 5 katmanlı koruma:
+  1. Sadece A/B rating buyer
+  2. GİB e-Fatura doğrulama
+  3. %15 overcollateralization
+  4. Sigorta havuzu (komisyon %0.5)
+  5. Smart contract escrow
+
+### Slayt 8: Rakip Karşılaştırma (30 sn)
+- Tablo:
+  - **FaturaChain** vs Polytrade vs Huma vs Geleneksel
+  - KOBİ direkt erişim ✓
+  - GİB entegrasyonu ✓
+  - Açık pazar + ikincil ✓
+  - Cross-border ✓
+
+### Slayt 9: Gelir Modeli (30 sn)
+- %1 birincil + %0.25 ikincil + %0.5 sigorta
+- Tek faturadan ~830€ platform geliri
+- Aylık 100 fatura → 50k EUR/ay → 600k EUR/yıl
+
+### Slayt 10: Yol Haritası + Kapanış (30 sn)
+- Phase 1: ✅ Hackathon MVP (canlı)
+- Phase 2: 6 ay — Real GİB, KYC, mainnet
+- Phase 3: 12 ay — BDDK lisans, multi-chain, DAO
+- "TÜBİTAK 1512 + teknopark kuluçka aday"
+- "Türk KOBİ'sinin global pazara çıkış kapısı"
+
+## Jüri Soruları — Hazırlıklı Cevaplar
+
+### "Default olursa ne olur?"
+> "5 katmanlı koruma. Önce KOBİ'nin %15 tamponu, sonra sigorta havuzu (%0.5 komisyondan finanse), sonra subrogation alacak hakkı. MVP'de demo olarak default senaryosu çalışıyor — sigorta havuzu pro-rata ödüyor."
+
+### "Geleneksel faktoring ile farkın?"
+> "%15-20 yerine %1.5-2 komisyon. 2 hafta yerine 2 dakika. Sadece Türkiye değil, global yatırımcı. KOBİ direkt erişim — aracı yok. GİB entegrasyonu yasal güvenlik. İkincil piyasa likidite."
+
+### "Web3'ün gerekli olduğunu nasıl açıklarsın?"
+> "İki farklı ülke (Türkiye-Almanya), iki farklı hukuk, iki farklı para. Smart contract tarafsız hakem. Ayrıca **fraksiyonel yatırım**: 100€'dan başlayan global yatırımcı erişimi geleneksel finansta imkansız."
+
+### "BDDK regülasyon engel olur mu?"
+> "Türkiye 2025-2026'da Kripto Varlık Hizmet Sağlayıcı çerçevesi getirdi. Erken diyalog ile uyumluyuz. Phase 3'te lisans alacağız. Şu anda fraksiyonel olduğu için 'menkul kıymet' tanımına girmiyor — utility token."
+
+### "Pazar büyüklüğü gerçekten 1.87 trilyon mu?"
+> "Türkiye Faktoring Derneği 2024 raporu. Bizim hedeflediğimiz ihracat alacakları kısmı bunun %20'si — 374 milyar TL. Birim ekonomimizle %1 pazar payı = 4 milyar TL volüm = 60M TL platform geliri."
+
+### "Diğer Web3 platformlardan farkın?"
+> "Polytrade aracı kullanıyor — KOBİ direkt giremez. Huma kurumsal — bireysel yatırımcı yok. Hiçbiri Türk GİB API'sine bağlı değil. Bizim açık pazar + ikincil piyasa kombinasyonumuz yatırımcıya **exit option** veriyor — bu likidite KOBİ'ye iyi fiyat verir."
+
+### "Ekibinizde kim var?"
+> "İki kurucu — yarısı blockchain, yarısı full-stack. Hackathon'dan sonra TÜBİTAK 1512 ile büyütme planı. Üniversite işbirlikleri için Boğaziçi, ODTÜ ile görüşmeler başladı."
+
+### "Smart contract güvenliği?"
+> "OpenZeppelin standartları kullanıyoruz. Reentrancy guard tüm external functions'da. Hardhat coverage hedef %85+. Phase 2'ye geçmeden önce Trail of Bits veya OpenZeppelin audit. Bug bounty program."
+
+### "İkincil pazarda likidite olmazsa?"
+> "İlk dönemde LP rebate (negatif maker fee) ile likidite çekmek mümkün. Aile ofisleri ve kripto fonlarıyla early partnership. Doğal olarak network effect — daha çok yatırımcı, daha derin pazar, daha düşük spread."
+
+## Pitch Tonu
+
+- **Özgüvenli** ama agresif değil
+- **Somut sayılar** — "1.87 trilyon", "%1.5 komisyon"
+- **Hikayeyle** sürükle — Ahmet Bey
+- **Demo'yu** öne çıkar
+- **Game theory bilgisini** akademik jüri için göster
+- **Öğrencilik** sergileme — kurucu güveniyle konuş
+
+`★ Insight ─────────────────────────────────────`
+Biruni Teknopark akademik jürisi için **mekanizma tasarımı** ve **oyun teorisi** anahtar kelimeleri büyük artı. "Pareto optimal", "Bertrand competition", "Nash equilibrium" gibi kavramları doğru bağlamda kullan — bu jüriye "öğrenci hazırcı değil, sistem mühendisi" mesajı verir.
+`─────────────────────────────────────────────────`
+
+## Demo Yardımcı
+
+Demo öncesi browser'da hazır:
+- Tab 1: Ahmet (KOBİ profili)
+- Tab 2: Hans (Yatırımcı)
+- Tab 3: Sara
+- Tab 4: Mehmet/Erkin
+- Tab 5: Admin (default trigger için)
+- Tab 6: Sigorta sayfası (havuz büyüklüğü)
+- Tab 7: Docs (hızlı referans)
+
+## Pitch Bitişinde
+
+> "FaturaChain Türk KOBİ'sinin global pazara açılan kapısı. Bugün 32 saatlik hackathon'da çalışan MVP gösterdik. 6 ay sonra mainnet, 12 ay sonra BDDK lisansı. Soru ve önerilerinize açığız. Teşekkürler."

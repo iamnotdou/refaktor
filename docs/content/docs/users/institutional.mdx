@@ -1,0 +1,64 @@
+---
+title: Kurumsal Yatırımcı
+description: Aile ofisi, kripto fon, RWA yatırım fonu — büyük hacimli alıcı
+---
+
+# Kurumsal Yatırımcı
+
+Büyük hacimli, programatik (API) erişen ve **toplu fatura paketleri** alan persona. Phase 2'de devreye girmesi planlanan ama mimaride yer ayrılan rol.
+
+## Profil
+
+- **Tipik örnek:** RWA-fokuslu kripto fonu, aile ofisi, neobanka treasury
+- **Bütçe:** 100.000$ – 50M$
+- **Tek bir faturadan değil**, portföy oluşturmak için 50-200 fatura alır
+- **Compliance:** KYC/AML belgeleri yüklenmiş, accredited investor
+
+## Motivasyon
+
+- Geleneksel finansta bulunmayan **getiri/risk profili** (kısa vadeli, USD-bazlı, RWA-backed)
+- Çeşitlendirilmiş fatura sepeti = düşük volatilite
+- API ile **otomatik portföy yönetimi**
+- Türk ihracat alacakları — euro/dolar bazlı, döviz hedge'i içinde
+
+## Görevleri
+
+1. Whitelist + accredited KYC
+2. API key al
+3. Programatik fatura tarama (`GET /api/marketplace?rating=A&minApy=12`)
+4. Toplu bid yerleştirme (`POST /api/orders/batch`)
+5. Portföy reporting endpoint'lerini tüketme
+6. Vergi raporu indirme
+
+## Ekranlar
+
+- Web UI ikincil — esas olarak **API entegrasyonu**
+- `/institutional/dashboard` — Portfolio overview, exposure, default rate
+- `/institutional/api-docs` — Endpoint katalogu
+
+## Beklediği Özellikler
+
+- **Rate limit yüksek** API
+- **Webhook'lar** (yeni fatura, eşleşme, default)
+- **Bulk operations** (50 emiri tek transaction'da imzalama — multicall)
+- **Custom credit scoring** (kendi modelini override edebilme)
+- **White-label reporting** (PDF aylık rapor)
+
+## Smart Contract Etkileşimi
+
+Multicall pattern:
+```solidity
+// 50 bid'i tek tx'te
+multicall.aggregate([
+  orderBook.placeBid(inv1, p1, q1),
+  orderBook.placeBid(inv2, p2, q2),
+  ...
+])
+```
+
+## KPI'lar
+
+- **AUM** (Assets Under Management) bu platformda
+- **Avg ticket size** — ortalama emir büyüklüğü
+- **Coverage** — kaç farklı fatura tutuyor
+- **API uptime** — kurumsal SLA gereği

@@ -1,0 +1,91 @@
+---
+title: Settlement (Vade Ödemesi)
+description: Vade dolduğunda alıcı (Lidl) öder, token sahiplerine pro-rata dağıtım yapılır
+---
+
+# Settlement (Vade Ödemesi)
+
+120. günde Lidl 50.000€ ödüyor. Sistemdeki token sahiplerine **nominal × token sayısı** dağıtılıyor.
+
+## Aktörler
+
+- **Lidl** (alıcı, off-chain ödeme)
+- **Platform Admin** (manuel trigger MVP'de, oracle Phase 2'de)
+- **Escrow.sol** + **InvoiceNFT.sol**
+- **Tüm token sahipleri** (Hans, Sara, Erkin, ...)
+
+## İki Yol
+
+### A) MVP — Manuel Trigger
+Lidl banka hesabına ödeme yaptı. Platform admin bunu kontrol edip:
+```solidity
+escrow.markPaid(invoiceId=42, amount=50000)
+```
+
+Bu fonksiyon admin yetkisi gerektirir. Trigger sonrası dağıtım otomatik.
+
+### B) Phase 2 — Chainlink Functions / Oracle
+Bir oracle (Chainlink veya custom) Lidl'in ödemesini takip eder. Otomatik:
+```solidity
+oracleCallback(invoiceId=42, paid=true, amount=50000)
+```
+
+## Dağıtım
+
+```
+Toplam: 50.000 EUR (USDC karşılığı)
+Token sayısı: 500
+Token başına: 100 USDC
+
+Token sahipleri:
+- Hans:   60 token  →  6.000 USDC
+- Erkin:  60 token  →  6.000 USDC
+- Sara:  200 token  → 20.000 USDC
+- Mehmet: 80 token  →  8.000 USDC
+- ... (toplam 500 token)
+```
+
+## Sequence Diagram
+
+```
+Lidl      Bank      Admin     Escrow    InvoiceNFT   Holders
+ |         |         |          |          |            |
+ |-pay---->|         |          |          |            |
+ |         |-confirm>|          |          |            |
+ |         |         |--mark--->|          |            |
+ |         |         |          |--burn--->|            |
+ |         |         |          |--xfer--------------> Hans
+ |         |         |          |--xfer--------------> Erkin
+ |         |         |          |--xfer--------------> Sara
+ |         |         |          |--xfer--------------> Mehmet
+```
+
+## Burn vs Hold
+
+İki tasarım seçeneği:
+- **Burn:** Settlement sonrası token'lar yakılır, NFT collection küçülür. Daha temiz state.
+- **Hold:** Token'lar "matured" işaretlenir, on-chain tarihsel kayıt kalır.
+
+MVP için **burn** daha temiz — çünkü matured token başka bir transferle karışmasın diye.
+
+## Kısmi Ödeme Senaryosu
+
+Lidl 50.000€ yerine 45.000€ ödedi (kalan ihtilaflı):
+- 45.000€ pro-rata dağıtılır → token başına 90 USDC
+- Kalan 5.000€ için **disputed** marker
+- Sigorta havuzu kalanı karşılayabilir veya dispute resolution başlar
+
+Detay: [Default Flow](/docs/flows/default)
+
+## Geç Ödeme
+
+Vade geçti ama Lidl henüz ödemedi:
+- 1-7 gün: Sarı uyarı, geç ödeme cezası faizi başlar
+- 8-30 gün: Kırmızı uyarı, sigorta havuzu hazırda
+- 30+ gün: Default ilan, sigorta tazminatı başlar
+
+```solidity
+function calculateLatePenalty(uint daysLate) returns (uint) {
+  return amount * 5 / 1000 * daysLate; // %0.5/gün
+}
+```

@@ -1,0 +1,12 @@
+{
+  "title": "Mimari",
+  "pages": [
+    "monorepo",
+    "tech-stack",
+    "frontend",
+    "backend",
+    "contracts",
+    "hybrid-orderbook",
+    "data-model"
+  ]
+}

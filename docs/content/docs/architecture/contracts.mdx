@@ -1,0 +1,185 @@
+---
+title: Smart Contracts
+description: 5 kontrat — InvoiceNFT, OrderBook, Escrow, InsurancePool, MockUSDC
+---
+
+# Smart Contracts
+
+> Bu bölüm contracts ekibinin (arkadaş) `contracts/` submodule'unda yazdıkları için **interface kontratı** niteliğinde. Frontend ve backend bu fonksiyonları çağırır.
+
+## InvoiceNFT.sol (ERC-1155)
+
+Faturayı fraksiyonel NFT olarak temsil eder.
+
+```solidity
+contract InvoiceNFT is ERC1155, AccessControl {
+    struct Invoice {
+        uint256 tokenId;
+        address seller;
+        string buyerName;
+        uint256 amount;       // nominal
+        uint256 dueDate;
+        uint256 totalTokens;
+        uint8 buyerRating;    // 0=A, 1=B, 2=C, 3=D
+        bool gibVerified;
+    }
+    
+    mapping(uint256 => Invoice) public invoices;
+    
+    event InvoiceMinted(uint256 indexed tokenId, address indexed seller, uint256 amount);
+    
+    function mintInvoice(
+        string calldata buyerName,
+        uint256 amount,
+        uint256 dueDate,
+        uint256 totalTokens,
+        uint8 buyerRating
+    ) external returns (uint256 tokenId) {
+        // require KYC
+        // require buyer whitelisted
+        // mint totalTokens to seller
+        emit InvoiceMinted(tokenId, msg.sender, amount);
+    }
+    
+    function getInvoice(uint256 tokenId) external view returns (Invoice memory);
+}
+```
+
+## OrderBook.sol
+
+On-chain settlement yapar; matching off-chain'de.
+
+```solidity
+contract OrderBook {
+    struct Order {
+        uint256 id;
+        uint256 invoiceId;
+        address maker;
+        OrderType orderType;  // Bid | Ask
+        uint256 price;        // 6 decimal (USDC scale)
+        uint256 originalQty;
+        uint256 remainingQty;
+        bool active;
+    }
+    
+    mapping(uint256 => Order) public orders;
+    
+    event OrderPlaced(uint256 indexed id, uint256 indexed invoiceId, address indexed maker);
+    event OrderCancelled(uint256 indexed id);
+    event Trade(uint256 indexed invoiceId, address indexed buyer, address indexed seller, uint256 qty, uint256 price);
+    
+    function placeBid(uint256 invoiceId, uint256 price, uint256 qty) external returns (uint256 orderId);
+    function placeAsk(uint256 invoiceId, uint256 price, uint256 qty) external returns (uint256 orderId);
+    function cancelOrder(uint256 orderId) external;
+    
+    // Backend matcher tarafından çağrılır (relayer role)
+    function executeTrade(
+        uint256 invoiceId,
+        address buyer,
+        address seller,
+        uint256 qty,
+        uint256 price
+    ) external onlyRelayer;
+}
+```
+
+## Escrow.sol
+
+USDC'yi kilitler, settlement ve default'u yönetir.
+
+```solidity
+contract Escrow {
+    IERC20 public usdc;
+    InvoiceNFT public invoiceNFT;
+    InsurancePool public insurance;
+    
+    mapping(uint256 => uint256) public locked; // invoiceId → USDC kilitli
+    
+    function lockForBid(uint256 invoiceId, uint256 amount) external;
+    function distributeTradeFunds(
+        uint256 invoiceId,
+        address seller,
+        uint256 amount
+    ) external onlyOrderBook;
+    
+    // Vade dolduğunda
+    function markPaid(uint256 invoiceId, uint256 amount) external onlyOwner;
+    function distributeMaturity(uint256 invoiceId) external;
+    
+    // Default
+    function declareDefault(uint256 invoiceId) external onlyOwner;
+}
+```
+
+## InsurancePool.sol
+
+Komisyonlardan sigorta havuzu, default'ta tazminat.
+
+```solidity
+contract InsurancePool {
+    uint256 public totalStaked;
+    mapping(address => StakePosition) public stakes;
+    
+    function stake(uint256 amount, uint256 lockPeriod) external returns (uint256 positionId);
+    function unstake(uint256 positionId) external;
+    function claimRewards() external;
+    
+    function notifyDefault(uint256 invoiceId, uint256 amount) external onlyEscrow;
+    function payClaim(uint256 invoiceId, address[] calldata holders, uint256[] calldata amounts) external;
+}
+```
+
+## MockUSDC.sol
+
+Sadece testnet/demo için.
+
+```solidity
+contract MockUSDC is ERC20 {
+    constructor() ERC20("Mock USDC", "USDC") {
+        _mint(msg.sender, 1_000_000_000 * 10**6); // 1B USDC
+    }
+    
+    function faucet(address to, uint256 amount) external {
+        _mint(to, amount); // herkes mint edebilir, demo için
+    }
+}
+```
+
+## Yetkilendirme Modeli
+
+| Rol | Sahip | Hangi fonksiyonlar |
+|---|---|---|
+| `DEFAULT_ADMIN_ROLE` | Multisig (Phase 2) / EOA (MVP) | upgrade, setFee, pause |
+| `RELAYER_ROLE` | Backend matcher service | `executeTrade` |
+| `KYC_ADMIN_ROLE` | Platform Admin | KOBİ whitelist |
+| `ORACLE_ROLE` | Chainlink (Phase 2) / Admin (MVP) | `markPaid` |
+
+## Etkileşim Diyagramı
+
+```
+KOBİ ──(mint)──> InvoiceNFT
+KOBİ ──(approve+placeAsk)──> OrderBook
+Yatırımcı ──(approve USDC)──> Escrow
+Yatırımcı ──(placeBid)──> OrderBook
+Backend Relayer ──(executeTrade)──> OrderBook
+                        │
+                        ├──> Escrow.distributeTradeFunds (USDC → KOBİ)
+                        ├──> InvoiceNFT.transferFrom (token → alıcı)
+                        └──> InsurancePool.fundFromFee (komisyondan pay)
+
+Vade dolunca:
+Admin ──(markPaid)──> Escrow ──> Lidl USDC → tüm token sahipleri
+
+Default:
+Admin ──(declareDefault)──> Escrow ──> InsurancePool.payClaim
+```
+
+## Test Coverage Hedefi (MVP)
+
+- InvoiceNFT: mint, transfer, getInvoice — ✓
+- OrderBook: placeBid, placeAsk, executeTrade, partial fill — ✓
+- Escrow: lock, distribute, markPaid, declareDefault — ✓
+- InsurancePool: stake, unstake, payClaim — ✓
+- E2E: invoice → trade → maturity payout — ✓
+
+Hedef: **>80% line coverage** Hardhat coverage ile.

@@ -1,0 +1,12 @@
+{
+  "title": "Akışlar",
+  "pages": [
+    "invoice-onboarding",
+    "primary-market",
+    "secondary-market",
+    "settlement",
+    "default",
+    "insurance-claim",
+    "partial-fill"
+  ]
+}

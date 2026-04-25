@@ -1,0 +1,20 @@
+{
+  "title": "FaturaChain",
+  "pages": [
+    "index",
+    "---Konsept---",
+    "concept",
+    "users",
+    "flows",
+    "---Teknik---",
+    "architecture",
+    "game-theory",
+    "risk",
+    "---İş---",
+    "revenue",
+    "roadmap",
+    "pitch",
+    "---Geliştirme---",
+    "development"
+  ]
+}

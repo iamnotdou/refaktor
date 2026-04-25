@@ -1,0 +1,181 @@
+---
+title: Contracts Submodule
+description: Smart contracts'ın git submodule olarak yönetimi
+---
+
+# Contracts Submodule
+
+Contracts arkadaşın ayrı GitHub repo'sunda. Bu repo'da **submodule** olarak yer alır — bir snapshot'a pin'lenir.
+
+## İlk Kurulum
+
+Arkadaş repo'yu kurduktan sonra:
+```bash
+cd /path/to/refaktor
+git submodule add https://github.com/<friend>/<contracts-repo>.git contracts
+git submodule update --init --recursive
+```
+
+`.gitmodules` otomatik oluşur:
+```ini
+[submodule "contracts"]
+    path = contracts
+    url = https://github.com/<friend>/<contracts-repo>.git
+    branch = main
+```
+
+## Yeni Klonlayan Birinin Yapması Gerekenler
+
+```bash
+git clone https://github.com/iamnotdou/refaktor.git
+cd refaktor
+git submodule update --init --recursive
+```
+
+veya tek seferde:
+```bash
+git clone --recurse-submodules https://github.com/iamnotdou/refaktor.git
+```
+
+## Submodule'u Güncelleme
+
+Arkadaş yeni contract version push'ladı:
+```bash
+# refaktor root'tan
+cd contracts
+git checkout main
+git pull
+cd ..
+
+# Ana repo'da pin'i güncelle
+git add contracts
+git commit -m "bump contracts to <new-hash>"
+git push
+```
+
+veya tek komutta:
+```bash
+git submodule update --remote contracts
+git add contracts && git commit -m "bump contracts"
+```
+
+## Submodule'da Yerel Değişiklik
+
+Eğer **submodule içinde değişiklik yapmanı gerekirse:**
+
+```bash
+cd contracts
+git checkout -b feat/your-change
+# ... değişiklikler ...
+git commit -am "feat: ..."
+git push origin feat/your-change
+
+# PR aç, arkadaş merge etsin
+# Sonra ana repo'da pin'i güncelle
+cd ..
+git submodule update --remote
+git commit -am "bump contracts"
+```
+
+`★ Insight ─────────────────────────────────────`
+Submodule'da **detached HEAD** ile çalışmamaya dikkat. Hep önce branch'e geç (`git checkout -b ...`), sonra commit yap. Yoksa commit'lerin "boşlukta" kalır.
+`─────────────────────────────────────────────────`
+
+## ABI Senkronizasyonu
+
+Her contract update sonrası:
+```bash
+cd contracts
+pnpm install      # ilk kez
+pnpm hardhat compile
+cd ..
+pnpm sync:abi     # /shared/abi/ güncelle
+```
+
+Tipik akış:
+```
+Arkadaş: contracts repo'da değişiklik → push
+Sen:
+  1. cd contracts && git pull
+  2. pnpm hardhat compile
+  3. cd .. && pnpm sync:abi
+  4. git add contracts shared/abi
+  5. git commit -m "bump contracts: new mintInvoice signature"
+  6. git push
+```
+
+## Deploy Senkronizasyonu
+
+Arkadaş contract'ı yeniden deploy etti → yeni adresler gelir. Bunlar `/shared/const/addresses.ts`'a yazılır:
+
+```typescript
+// shared/const/addresses.ts
+export const CONTRACTS = {
+  amoy: {
+    invoiceNFT: '0xABC...',
+    orderBook: '0xDEF...',
+    escrow: '0x123...',
+    insurancePool: '0x456...',
+    mockUsdc: '0x789...',
+    chainId: 80002,
+  },
+  polygon: {
+    // mainnet (Phase 2)
+  },
+};
+```
+
+## Submodule'u Kaldırma (gerekirse)
+
+```bash
+git submodule deinit -f contracts
+git rm -f contracts
+rm -rf .git/modules/contracts
+git commit -am "remove contracts submodule"
+```
+
+## Yaygın Sorunlar
+
+### "Submodule path 'contracts' not initialized"
+```bash
+git submodule update --init
+```
+
+### Git push edemiyor (submodule reference uyumsuz)
+Submodule ile ana repo arasında commit referansı uyumsuz:
+```bash
+cd contracts
+git log -1
+# Ana repo'daki referans hash bu mu?
+cd ..
+git diff --submodule
+```
+
+### "fatal: not a git repository (in submodule)"
+Submodule init edilmemiş:
+```bash
+git submodule update --init --recursive
+```
+
+### Authentication yapamıyor (private repo)
+```bash
+git config --global credential.helper osxkeychain  # macOS
+# veya SSH key kullan
+```
+
+## CI'de Submodule Çekme
+
+GitHub Actions:
+```yaml
+- uses: actions/checkout@v4
+  with:
+    submodules: recursive
+    token: ${{ secrets.SUBMODULE_TOKEN }}  # private ise
+```
+
+## Tavsiyeler
+
+1. **Branch protection:** `contracts/main`'e direct push yasaklayın, PR review zorunlu
+2. **Versioning:** Contract release'leri `v0.1.0` gibi tag'le, ana repo o tag'e pin'lensin
+3. **Documentation:** Contract repo'sunda `CHANGELOG.md` tut, breaking changes'i highlight et
+4. **ABI lock:** Production'da ABI'leri commit'le, yeniden derleme'den bağımsız olsun

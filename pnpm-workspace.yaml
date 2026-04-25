@@ -1,0 +1,6 @@
+packages:
+  - "app"
+  - "docs"
+  - "refaktor-sc"
+  - "refaktor-indexer"
+  - "refaktor-sdk"

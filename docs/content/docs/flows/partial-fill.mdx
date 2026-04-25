@@ -1,0 +1,135 @@
+---
+title: Partial Fill (Kısmi Eşleşme)
+description: Bir emir tamamen değil, kısmen eşleşir — kalan miktar bekler
+---
+
+# Partial Fill
+
+Hans 200 token istiyor 95.5€'dan, ama Ahmet'in askında sadece 80 token kaldı. **80 fill, 120 bekler.**
+
+## Senaryo
+
+```
+Order book state:
+  ASK: Ahmet 95€ × 80 token
+  BID: Hans yeni geliyor — 95.5€ × 200 token
+
+Match logic:
+  Hans bid ≥ Ahmet ask → MATCH
+  fillQty = min(200, 80) = 80
+  fillPrice = 95€ (maker price)
+
+Sonuç:
+  Ahmet ask FULLY FILLED — 80 × 95 = 7.600 USDC Ahmet'e
+  Hans bid PARTIALLY FILLED — 80 alındı, 120 token hâlâ aktif bid
+  Order book kalan:
+    BID: Hans 95.5€ × 120 token (kalan)
+    ASK: (boş, bekleniyor)
+```
+
+## Kontrat Tarafı
+
+`OrderBook.sol`:
+```solidity
+struct Order {
+  uint256 invoiceId;
+  address maker;
+  uint256 price;
+  uint256 originalQty;
+  uint256 remainingQty;  // partial fill ile azalır
+  bool active;
+}
+
+function executeTrade(...) {
+  uint fillQty = min(bid.remainingQty, ask.remainingQty);
+  
+  bid.remainingQty -= fillQty;
+  ask.remainingQty -= fillQty;
+  
+  if (bid.remainingQty == 0) bid.active = false;
+  if (ask.remainingQty == 0) ask.active = false;
+  
+  emit Trade(bid.maker, ask.maker, fillQty, fillPrice);
+}
+```
+
+## Backend Matching
+
+Off-chain matcher partial fill'leri yönetir:
+```typescript
+function matchOrders(invoiceId) {
+  while (bestBid.price >= bestAsk.price) {
+    const qty = Math.min(bestBid.remaining, bestAsk.remaining);
+    
+    await contract.executeTrade(
+      invoiceId,
+      bestBid.maker,
+      bestAsk.maker,
+      qty,
+      bestAsk.price
+    );
+    
+    bestBid.remaining -= qty;
+    bestAsk.remaining -= qty;
+    
+    if (bestBid.remaining === 0) bids.shift();
+    if (bestAsk.remaining === 0) asks.shift();
+    
+    bestBid = bids[0];
+    bestAsk = asks[0];
+    
+    if (!bestBid || !bestAsk) break;
+  }
+}
+```
+
+## Multi-Counterparty Partial Fill
+
+Hans'ın 200 token'lık bid'i birden fazla ask'la eşleşebilir:
+```
+ASK queue:
+  Ahmet 95€ × 80
+  Mehmet 95.3€ × 50
+  Sara 95.8€ × 100
+
+Hans bid: 95.5€ × 200
+
+Match 1: Ahmet (95) ≤ Hans (95.5) → 80 token, 95€
+Match 2: Mehmet (95.3) ≤ Hans (95.5) → 50 token, 95.3€
+Match 3: Sara (95.8) > Hans (95.5) → NO MATCH
+
+Hans toplam: 130 token alındı (80 + 50)
+Hans kalan bid: 95.5€ × 70 token (aktif)
+Hans toplam ödediği: 80×95 + 50×95.3 = 11.365 USDC
+Avg price: 87.4€ (favorable, alttan dolduruldu)
+```
+
+## Emir Tipleri ve Partial Fill Davranışı
+
+| Tip | Partial fill izinli | Açıklama |
+|---|---|---|
+| **Limit** | Evet | Standart, kalan miktar emir kitabında bekler |
+| **Market** | Evet ama fiyat sınırı | maxPrice koruması ile |
+| **IOC (Immediate or Cancel)** | Evet, kalan iptal | Phase 2 |
+| **FOK (Fill or Kill)** | Hayır, hepsi yoksa hiçbiri | Phase 2 |
+| **Post-only** | Evet, sadece maker | LP'ler için, Phase 2 |
+
+## Frontend Görünüm
+
+Hans'ın `/portfolio` sayfası:
+```
+Active Orders:
+  ┌─ Invoice #42 — Lidl, 50K EUR
+  │  Bid: 95.5€ × 200 token
+  │  Status: PARTIAL FILL (130/200)
+  │  Remaining: 70 token still bidding
+  │  Spent: 11.365 USDC
+  └─ [Cancel remaining]
+
+Holdings:
+  ┌─ Invoice #42
+  │  Holdings: 130 tokens
+  │  Avg cost: 87.4€
+  │  Current best ask: 96€
+  │  Unrealized P&L: +1.118 USDC
+```

@@ -1,0 +1,14 @@
+{
+  "title": "Oyun Teorisi",
+  "pages": [
+    "pricing-game",
+    "seller-strategy",
+    "investor-strategy",
+    "secondary-liquidity",
+    "adverse-selection",
+    "insurance-incentives",
+    "default-game",
+    "nash-equilibrium",
+    "attack-vectors"
+  ]
+}

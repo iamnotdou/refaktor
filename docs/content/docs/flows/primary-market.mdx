@@ -1,0 +1,83 @@
+---
+title: Birincil Pazar Trade
+description: KOBİ'nin listelediği token'ı yatırımcı ilk kez satın alır
+---
+
+# Birincil Pazar Trade
+
+Ahmet Bey listeledi (95€ ask × 500). Hans 95.8€'dan 120 token istiyor.
+
+## Aktörler
+
+- **Ahmet Bey** (KOBİ, satıcı)
+- **Hans** (yatırımcı, alıcı)
+- **Backend** (off-chain matching)
+- **OrderBook.sol** + **Escrow.sol** + **InvoiceNFT.sol**
+
+## Akış
+
+```
+1. Hans /marketplace → invoice 42'yi açar
+2. Hans "Buy now" — 120 token, max price 96€
+3. Frontend → MockUSDC.approve(escrow, 120 × 96)
+4. Frontend → POST /api/orders { type: 'bid', invoiceId: 42, price: 95.8, qty: 120, maker: Hans }
+5. Backend → matching engine:
+     bestAsk = 95€ (Ahmet)
+     bid 95.8 ≥ ask 95 → MATCH
+6. Backend → execute trade:
+     fillPrice = 95€ (taker pays maker price — price-time priority)
+     fillQty = 120
+7. Backend → settlement transaction:
+     OrderBook.executeTrade(invoiceId=42, buyer=Hans, seller=Ahmet, qty=120, price=95)
+8. Smart Contract:
+     - Escrow'dan Hans'tan 120×95 USDC çek
+     - 1% komisyon kes (1.14 USDC platform, 0.5% sigorta = 0.57 USDC)
+     - Ahmet'e 11.286 USDC transfer
+     - InvoiceNFT'den 120 token Hans'a transfer (ERC-1155 fraksiyonel)
+9. Trade event → Backend listener → Trade doc kaydet
+10. WebSocket push → Hans /portfolio güncellenir, Ahmet /dashboard güncellenir
+```
+
+## Fiyatlama Kuralı
+
+Backend FIFO + price-time priority kullanır:
+
+```
+Eşleşen iki emirde fillPrice = maker'ın emir fiyatı
+Ahmet emrini önce koydu → maker, ask = 95€
+Hans sonra geldi → taker, bid = 95.8€
+fillPrice = 95€
+Hans 0.8€/token "lehte slippage" yaşıyor (favorable)
+```
+
+## Komisyon Akışı
+
+| Pay | Oran | Bu trade'de | Yer |
+|---|---|---|---|
+| KOBİ'ye giden | %98.5 | 11.286 USDC | Ahmet |
+| Platform | %1.0 | 114 USDC | Treasury |
+| Sigorta havuzu | %0.5 | 57 USDC | InsurancePool |
+
+(Komisyon **satıcıdan** kesilir; alıcı tam fiyatı öder.)
+
+## Sequence Diagram
+
+```
+Hans    Frontend    Backend   OrderBook   Escrow   InvoiceNFT
+ |        |          |           |          |          |
+ |-buy--->|          |           |          |          |
+ |        |-approve->|           |          |          |
+ |        |-POST---->|           |          |          |
+ |        |          |--match--->|          |          |
+ |        |          |           |--lock--->|          |
+ |        |          |           |          |--xfer--->|
+ |        |          |<--event---|          |          |
+ |        |<--ok-----|           |          |          |
+```
+
+## Edge Cases
+
+- **Approval yetersiz** → MetaMask ekstra approve isteği
+- **Eşleşen ask fiyatı değişti** → Best ask refresh, retry
+- **Partial fill** → 120 token isteniyor, sadece 80 askta var → 80 fill, 40 limit'te bekler
+- **Race condition** → Backend optimistic lock; aynı askı 2 bid yarışırsa biri reverted

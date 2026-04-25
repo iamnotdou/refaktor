@@ -1,0 +1,60 @@
+---
+title: Likidite Sağlayıcı (LP / Market Maker)
+description: Order book derinliğini sürekli besleyen profesyonel aktör
+---
+
+# Likidite Sağlayıcı (LP / Market Maker)
+
+Order book'ta **bid ve ask'ı sürekli açık tutarak** likiditeyi sağlayan aktör. Spread'den (bid-ask farkından) kar eder. Phase 2'de devreye girer ama mimaride hesaba katılır.
+
+## Profil
+
+- **Tipik örnek:** Algo trading firması, AMM bot operatörü
+- **Bütçe:** 50.000$ – 5M$
+- **Sermayesini çok pozisyona dağıtır**, hiçbirinde uzun süre kalmaz
+- **Yüksek frekanslı emir güncelleme**
+
+## Motivasyon
+
+- Bid-ask **spread'i** (örn. 95.2€ bid / 95.5€ ask = 0.3€ spread)
+- Toplu hacimden komisyon iadesi (maker rebate)
+- Rakip yokken spread daha geniş, daha yüksek kar
+
+## Görevleri
+
+1. Wallet + KYC + LP tier başvurusu
+2. USDC ve token rezervleri yatır
+3. Bot çalıştır:
+   - Her fatura için bid/ask emirleri yerleştir
+   - Vade yaklaştıkça fiyatları nominal'e yakınla
+   - Default sinyali geldiğinde tüm pozisyonu kapat
+4. Spread kazançlarını tahsil et
+
+## Sistemden Beklediği
+
+- **Maker rebate:** Order book'a likidite koyduğunda komisyon iadesi (örn. -%0.05 fee)
+- **Düşük gas:** Yüksek frekanslı emir güncellemesi gerekir
+- **Cancel/replace** maliyetinin düşük olması
+- **Real-time WebSocket** market data feed
+- **Post-only** emir tipi (taker olunca otomatik iptal)
+
+## Smart Contract Etkileşimi
+
+İkincil piyasa için yoğun:
+```
+- placeBid()    × N
+- placeAsk()    × N
+- cancelOrder() × N (her saniye)
+- batchUpdate() (multicall ile toplu güncelleme)
+```
+
+`★ Insight ─────────────────────────────────────`
+On-chain order book'ta her cancel transaction parası ister; bu yüzden **off-chain order book + on-chain settlement** modeli LP'ler için tek pratik yol. Aksi halde gas maliyeti spread'i yer.
+`─────────────────────────────────────────────────`
+
+## KPI'lar
+
+- **Quoted spread** — sürekli kotasyon farkı
+- **Time-on-book** — emir kitabında geçirilen süre
+- **Inventory turnover** — sermaye dönüş hızı
+- **Adverse selection cost** — bilinçli trader'lara karşı kayıp

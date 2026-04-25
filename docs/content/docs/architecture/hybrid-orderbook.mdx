@@ -1,0 +1,96 @@
+---
+title: Hibrit Order Book
+description: Off-chain matching + on-chain settlement — neden bu model?
+---
+
+# Hibrit Order Book
+
+FaturaChain'in **kritik mimari kararı**: matching off-chain, settlement on-chain.
+
+## Üç Olası Tasarım
+
+| Tasarım | Matching | Settlement | Örnek |
+|---|---|---|---|
+| **Full on-chain** | On-chain | On-chain | dYdX v3 (eski), Loopring |
+| **Hibrit** | Off-chain | On-chain | dYdX v4, Serum, FaturaChain |
+| **Tam off-chain** | Off-chain | Off-chain | Coinbase, Binance |
+
+## Neden Hibrit?
+
+### Full on-chain'in problemi
+
+Order book'ta her bid/ask transaction. Cancel da transaction. LP (market maker) saniyede 10× emir günceller — Polygon'da bile saatte 50$ gas yer. Bu yüzden likidite kuruyacak.
+
+### Tam off-chain'in problemi
+
+Borsa cüzdanları kendinde tutuyor → **custodial risk**. Web3 vaadinden uzaklaşır. Sigorta havuzu, tokenize fatura zaten on-chain olduğu için fiyat keşfi off-chain ama settlement kesinlikle on-chain olmalı.
+
+### Hibritin kazandırdığı
+
+- **Gas tasarrufu:** Cancel/replace ücretsiz (off-chain DB)
+- **Hız:** Match anında, blok beklemiyor
+- **Custody yok:** Token ve USDC kullanıcı cüzdanında, sadece trade anında transfer
+- **Şeffaflık:** Trade'ler on-chain log'da
+
+## Akış Detayı
+
+```
+1. Hans bid verir → POST /api/orders → MongoDB'ye yaz
+2. Backend matcher engine bid'i diğer ask'larla karşılaştırır
+3. Match bulundu → Settlement transaction inşa et:
+   contract.executeTrade(invoiceId, buyer, seller, qty, price)
+4. Backend RELAYER_ROLE wallet'i bu tx'i imzalar ve gönderir
+5. Tx mined → Trade event yayınlanır
+6. Backend listener trade'i DB'de "confirmed" yapar
+7. WebSocket clients'a push
+```
+
+## Güven Modeli
+
+`★ Insight ─────────────────────────────────────`
+**Soru:** Backend matcher hile yapsa? Mesela Hans'ın 95.8'lik bid'ini görmezden gelip Mehmet'in 94'lük bid'ini eşleştirse?
+
+**Cevap:** Kullanıcı imzaladığı bid'in **price + qty**'sini biliyor. Settlement tx'inde bu parametreler değişirse on-chain revert olur. Yani matcher fiyatı değiştiremez. Ancak **sıralamayı** manipüle edebilir (price-time priority bozma). Bu yüzden Phase 2'de matcher'ı **decentralize** edeceğiz (multiple operators + dispute resolution).
+`─────────────────────────────────────────────────`
+
+## On-chain Doğrulamalar
+
+`OrderBook.executeTrade` şunları kontrol eder:
+1. `msg.sender == RELAYER_ROLE`
+2. Buyer'ın yeterli USDC approve'u var
+3. Seller'ın yeterli token bakiyesi var
+4. Price >= 0, qty > 0
+5. Invoice "listed" durumunda (matured/defaulted değil)
+
+Bu yüzden matcher imzalama hatası bile yapsa, kontrat reddeder.
+
+## Backend Relayer Wallet
+
+```
+Backend bir EOA tutuyor:
+  Address: 0xRelayer...
+  Role: RELAYER_ROLE
+  Görev: executeTrade tx'lerini gönder
+  Gas: Backend'in cüzdanından (sponsored)
+```
+
+Bu pattern **gas sponsorship** — kullanıcı kendi gas'ını ödemiyor, backend ödüyor. Kullanıcı sadece USDC approve + ERC-1155 approve imzalıyor. Web3 onboarding'i kolaylaştırır.
+
+## Trade-off Tablosu
+
+| Özellik | Full on-chain | Hibrit | Tam off-chain |
+|---|---|---|---|
+| Gas | Yüksek | Düşük | Yok |
+| Custody | Self | Self | Custodial |
+| Hız | Blok süresi | Anlık | Anlık |
+| Güven | Kontrat | Operator + kontrat | Operator |
+| MEV | Çok | Az | Yok |
+| Decentralization | Tam | Yarı | Yok |
+| Compliance | Zor | Kolay | Kolay |
+
+## Phase 2'de Decentralize Etme
+
+Tek backend matcher single-point-of-failure. Phase 2'de:
+- **Multiple relayers** — herhangi biri trade'i settle edebilir
+- **Optimistic matching** — fraud proof challenge mekanizması
+- **Sequencer** modeli (Optimism gibi)

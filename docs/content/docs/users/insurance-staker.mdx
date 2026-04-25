@@ -1,0 +1,63 @@
+---
+title: Sigorta Havuzu Stake'çisi
+description: USDC'sini sigorta havuzuna kilitleyip default tazminatı karşılığında getiri kazanan persona
+---
+
+# Sigorta Havuzu Stake'çisi
+
+Sigorta havuzuna USDC kilitler. Default olmazsa **getiri** alır; default olursa **sermaye yer**. Bir nevi merkeziyetsiz sigortacı.
+
+## Profil
+
+- **Tipik örnek:** Yield farmer, stable coin hodler, "passive RWA" arayan yatırımcı
+- **Bütçe:** 1.000$ – 1M$
+- **Risk profili:** Düşük-orta — getiri için sermayeye küçük risk
+
+## Motivasyon
+
+- **Pasif getiri:** Komisyonlardan ve geç ödeme cezalarından pay
+- **Düşük volatilite:** Default oranı düşük olursa stabil APY
+- **Sigorta havuzu büyüdükçe** APY tier'ları (uzun stake → daha yüksek pay)
+
+## Görevleri
+
+1. `InsurancePool` kontratına USDC stake et
+2. Lock period seç (30g / 90g / 180g — uzun lock = daha yüksek yield)
+3. Aylık dağıtımı bekle
+4. Default oluştuğunda tazminat kesintisini gör
+5. Lock dolduğunda unstake et
+
+## Mekanik
+
+```
+Her trade'den %0.5 → InsurancePool
+Default olduğunda → InsurancePool karşılar (max %15-20 tampon, overcollateralization)
+Net havuz büyüdükçe → stake'çilere pro-rata dağıtım
+```
+
+## Ekranlar
+
+- `/insurance` — Havuz büyüklüğü, son 30 gün getiri, default oranı
+- `/insurance/stake` — Stake / unstake formu
+- `/insurance/history` — Geçmiş dağıtımlar, default kesintileri
+
+## Smart Contract Etkileşimi
+
+| İşlem | Fonksiyon |
+|---|---|
+| Stake | `InsurancePool.stake(amount, lockPeriod)` |
+| Unstake | `InsurancePool.unstake(positionId)` |
+| Claim | `InsurancePool.claimRewards()` |
+
+## KPI'lar
+
+- **TVL** — Total Value Locked
+- **APY** — Stake'çiye dağıtılan yıllık getiri
+- **Loss ratio** — Default tazminatı / havuz büyüklüğü
+- **Avg lock period** — Ortalama kilitlenme süresi
+
+## Game Theory Bağlantısı
+
+Sigorta havuzunda **sigortacı ile yatırımcı çıkarları çatışmaz** — daha çok dikkatli alıcı seçimi her ikisinin de yararına. Ancak havuz çok büyürse moral hazard riski var (KOBİ ya da scoring algoritması daha riskli faturaları geçirebilir).
+
+Detay: [Sigorta Teşvik Oyunu](/docs/game-theory/insurance-incentives)

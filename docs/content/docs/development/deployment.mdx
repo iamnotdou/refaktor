@@ -1,0 +1,211 @@
+---
+title: Deployment
+description: Polygon Amoy testnet'e deploy + frontend Vercel + backend Railway
+---
+
+# Deployment
+
+## Hackathon MVP Deploy Hedefleri
+
+| Servis | Platform | Tahmini süre |
+|---|---|---|
+| Smart contracts | Polygon Amoy | 30 dk |
+| Frontend | Vercel | 15 dk |
+| Backend | Railway / Render | 30 dk |
+| Docs | Vercel | 15 dk |
+| Database | MongoDB Atlas | 15 dk |
+
+## Smart Contracts (Polygon Amoy)
+
+`contracts/scripts/deploy.ts`:
+```typescript
+import { ethers } from "hardhat";
+
+async function main() {
+  // 1. Mock USDC
+  const USDC = await ethers.deployContract("MockUSDC");
+  await USDC.waitForDeployment();
+  console.log("USDC:", await USDC.getAddress());
+
+  // 2. InvoiceNFT
+  const NFT = await ethers.deployContract("InvoiceNFT");
+  await NFT.waitForDeployment();
+
+  // 3. InsurancePool
+  const Pool = await ethers.deployContract("InsurancePool", [USDC.target]);
+  await Pool.waitForDeployment();
+
+  // 4. Escrow
+  const Escrow = await ethers.deployContract("Escrow", [USDC.target, NFT.target, Pool.target]);
+  await Escrow.waitForDeployment();
+
+  // 5. OrderBook
+  const Book = await ethers.deployContract("OrderBook", [NFT.target, Escrow.target]);
+  await Book.waitForDeployment();
+
+  // 6. Wire up roles
+  await NFT.grantRole(await NFT.MINTER_ROLE(), Book.target);
+  await Escrow.grantRole(await Escrow.RELAYER_ROLE(), Book.target);
+  await Pool.grantRole(await Pool.ESCROW_ROLE(), Escrow.target);
+
+  console.log("Deployed:");
+  console.log("  USDC:", USDC.target);
+  console.log("  InvoiceNFT:", NFT.target);
+  console.log("  Escrow:", Escrow.target);
+  console.log("  OrderBook:", Book.target);
+  console.log("  InsurancePool:", Pool.target);
+}
+
+main();
+```
+
+Çalıştırma:
+```bash
+cd contracts
+pnpm hardhat run scripts/deploy.ts --network amoy
+```
+
+`hardhat.config.ts`:
+```typescript
+networks: {
+  amoy: {
+    url: process.env.POLYGON_AMOY_RPC,
+    accounts: [process.env.DEPLOYER_PRIVATE_KEY],
+    chainId: 80002,
+  },
+}
+```
+
+## Frontend (Vercel)
+
+```bash
+cd frontend
+pnpm build
+```
+
+`vercel.json`:
+```json
+{
+  "framework": "vite",
+  "buildCommand": "pnpm build",
+  "outputDirectory": "dist",
+  "env": {
+    "VITE_BACKEND_URL": "@backend-url",
+    "VITE_CHAIN_ID": "80002"
+  }
+}
+```
+
+Deploy:
+```bash
+npx vercel --prod
+```
+
+## Backend (Railway)
+
+```bash
+cd backend
+railway login
+railway init
+railway link
+railway up
+```
+
+`railway.toml`:
+```toml
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "node dist/index.js"
+healthcheckPath = "/health"
+restartPolicyType = "always"
+```
+
+Environment variables (Railway dashboard):
+```
+MONGODB_URI=mongodb+srv://...
+RELAYER_PRIVATE_KEY=0x...
+POLYGON_RPC=https://rpc-amoy.polygon.technology
+INVOICE_NFT_ADDRESS=0x...
+ORDER_BOOK_ADDRESS=0x...
+ESCROW_ADDRESS=0x...
+PORT=4000
+```
+
+## Docs (Vercel)
+
+```bash
+cd docs
+pnpm build
+npx vercel --prod
+```
+
+## MongoDB Atlas
+
+1. https://cloud.mongodb.com/ → free tier (M0)
+2. Database user oluştur
+3. IP whitelist `0.0.0.0/0` (railway için)
+4. Connection string al → Railway `MONGODB_URI`
+
+## Demo Seed Script
+
+```bash
+cd backend
+pnpm seed
+```
+
+`backend/scripts/seed.ts`:
+```typescript
+// 1. Mock USDC dağıt 6 cüzdana
+// 2. 3 invoice mint et (Lidl, Bosch, Zara)
+// 3. 8 emir yerleştir
+// 4. 1 default test invoice
+```
+
+## Demo Cüzdanları
+
+`backend/scripts/seed-wallets.ts`:
+```typescript
+const wallets = [
+  { name: 'Ahmet (KOBİ)', mnemonic: '...', role: 'kobi' },
+  { name: 'Hans (Berlin)', mnemonic: '...', role: 'investor' },
+  { name: 'Sara (Dubai)', mnemonic: '...', role: 'investor' },
+  { name: 'Mehmet (İst)', mnemonic: '...', role: 'investor' },
+  { name: 'Erkin (yeni)', mnemonic: '...', role: 'investor' },
+  { name: 'Kenan (stake)', mnemonic: '...', role: 'staker' },
+];
+
+for (const w of wallets) {
+  const wallet = ethers.Wallet.fromPhrase(w.mnemonic);
+  await usdc.faucet(wallet.address, parseUnits('100000', 6));
+  await provider.sendTransaction({ to: wallet.address, value: parseEther('1') });
+}
+```
+
+## Verifikasyon
+
+Polygonscan'de contract verify:
+```bash
+pnpm hardhat verify --network amoy 0xCONTRACT_ADDR "constructor_arg1" "constructor_arg2"
+```
+
+Bu jüri ekranında "verified" badge gösterir → güven artar.
+
+## Rollback Stratejisi
+
+Bug bulduysan:
+1. Yeni deploy yap (yeni addresses)
+2. Frontend env vars güncelle
+3. Backend env vars güncelle
+4. Eski deploy'u Vercel'de revert et
+
+## Demo Günü Checklist
+
+- [ ] Polygon Amoy faucet 5+ MATIC her cüzdanda
+- [ ] Mock USDC 100k+ her demo cüzdanda
+- [ ] Backend Railway healthy (test endpoint)
+- [ ] Frontend Vercel live (URL hazır)
+- [ ] Demo cüzdanlar 3 ayrı browser'da
+- [ ] Pitch deck offline kopya (PDF)
+- [ ] Internet yedek (telefon hotspot)

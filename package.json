@@ -1,0 +1,16 @@
+{
+  "name": "refaktor",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.12.0",
+  "scripts": {
+    "build:sdk": "pnpm --filter @refaktor/sdk build",
+    "test:sc": "pnpm --filter refaktor-sc test",
+    "test:sdk": "pnpm --filter @refaktor/sdk test",
+    "dev:app": "pnpm --filter @refaktor/app dev",
+    "dev:docs": "pnpm --filter docs dev",
+    "indexer:dev": "pnpm --filter @refaktor/indexer dev",
+    "indexer:codegen": "pnpm --filter @refaktor/indexer codegen",
+    "sync-abi": "pnpm --filter @refaktor/sdk sync-abi && pnpm --filter @refaktor/indexer sync-abi"
+  }
+}

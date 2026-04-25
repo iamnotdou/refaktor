@@ -1,0 +1,118 @@
+---
+title: Sigorta Havuzu
+description: Default tazminat fonu — komisyonlardan finanse, stake'çiler tarafından beslenir
+---
+
+# Sigorta Havuzu
+
+Default durumunda token sahiplerine tazminat ödeyen on-chain fon.
+
+## Nasıl Finanse Edilir?
+
+İki kaynak:
+1. **Trade komisyonlarından %0.5** — her işlemden otomatik
+2. **Stake'çi yatırımları** — pasif yield arayan yatırımcılar
+
+```
+Trade volume × 0.5% → otomatik
++ Stake'çi yatırımı (lock period ile)
+= Pool bakiyesi
+```
+
+## Stake'çi Mekaniği
+
+```solidity
+function stake(uint256 amount, uint256 lockDays) returns (uint256 positionId);
+function unstake(uint256 positionId);
+function claimRewards();
+```
+
+| Lock period | APY |
+|---|---|
+| 30 gün | %8 baz |
+| 90 gün | %12 |
+| 180 gün | %16 |
+| 365 gün | %20 |
+
+## Tazminat Akışı
+
+Default ilan edilir → `notifyDefault(invoiceId, amount)`:
+```
+1. Pool'dan amount kadar USDC ayrılır
+2. getTokenHolders(invoiceId) → token sahipleri listesi
+3. Pro-rata transfer:
+   for holder in holders:
+     transfer(holder, amount * holder.balance / totalSupply)
+4. Pool bakiyesi azalır
+5. Stake'çilerin payı pro-rata azalır
+```
+
+## Subrogation (Geri Kazanım)
+
+Sigorta ödedikten sonra **buyer'a karşı alacak hakkı** havuza geçer. Buyer geç ödeme yaparsa:
+```
+Geç ödeme: 50.000 USDC (Lidl 90 gün geç ödedi)
+- Token sahipleri zaten sigorta'dan 42.5k aldı
+- Yeni gelen 50k tamamen havuza
+- Havuz net: -42.5 + 50 = +7.5k (subrogation karı)
+```
+
+## Pool Health Metrikleri
+
+```
+TVL: 500.000 USDC
+Total exposure (active invoices nominal): 5.000.000 USDC
+Coverage ratio: 500k / 5M = 10%
+Default rate (last 30 days): 0.4%
+Net APY (after defaults): ~12%
+```
+
+## Coverage Ratio
+
+```
+coverage = pool / max_default_exposure
+```
+
+Eğer çok büyük bir invoice default olursa pool'u boşaltabilir mi?
+- Tek invoice cap: max 500k EUR
+- Pool >= 5 × biggest invoice → 2.5M EUR target
+
+## Kademeli Tazminat (Phase 2)
+
+Pool boşalmaması için:
+1. Önce overcollateral tampon (%15)
+2. Sonra sigorta havuzu (%80'e kadar)
+3. Sonra "loss certificate" (havuz büyüdükçe ödeme)
+
+## Pool Overflow
+
+Pool çok büyürse (>10M):
+- Komisyon payı azaltılır (%0.5 → %0.25)
+- Stake'çilere bonus airdrop
+- "Strategic invest" — pool'un bir kısmı AAVE/Compound'da yield kazanır
+
+## Pool Underflow
+
+Pool çok küçükse (100k altında):
+- Komisyon payı artırılır (%0.5 → %1)
+- Yeni invoice listing pause
+- Acil stake bonus APY
+
+## Governance (Phase 3)
+
+Pool parametrelerini kim ayarlıyor?
+- MVP: Multisig (Platform team)
+- Phase 2: Multisig + 48h timelock
+- Phase 3: DAO oylaması (token holder'lar)
+
+## Şeffaflık
+
+Pool durumu **on-chain** — herkes:
+```solidity
+insurancePool.totalAssets()
+insurancePool.totalLiabilities()
+insurancePool.healthyRatio()
+insurancePool.recentDefaults(30)  // last 30 days
+```
+
+Frontend'de `/insurance` sayfası bunları realtime gösteriyor.

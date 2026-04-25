@@ -1,0 +1,133 @@
+---
+title: Birim Ekonomisi
+description: Tek faturadan ne kadar gelir, nereye gidiyor
+---
+
+# Birim Ekonomisi
+
+## Tek Fatura Senaryosu
+
+Ahmet Bey'in 50.000€ Lidl faturası, 500 token, %1 platform fee + %0.5 sigorta + %0.25 ikincil komisyon.
+
+## Birincil Satış Geliri
+
+```
+Tüm 500 token satıldı: 500 × 95€ = 47.500€
+Platform fee: 47.500 × 1.0% = 475€
+Sigorta payı: 47.500 × 0.5% = 237.5€
+KOBİ alır: 47.500 - 712.5 = 46.787.5€
+```
+
+## İkincil Pazar Geliri
+
+500 token toplam 3 kez el değiştiriyor (ortalama):
+```
+3 × 47.500 × 0.25% = 356.25€ ek platform geliri
+```
+
+## Toplam Platform Geliri (Tek Fatura)
+
+```
+Birincil platform fee: 475€
+İkincil platform fee: 356€
+Sigorta katkısı (ayrı havuz): 238€
+Net platform: 475 + 356 = 831€
+```
+
+KOBİ'nin maliyet: %1.5 (geleneksel %15-20'ye karşı)
+
+## Yatırımcı Tarafı
+
+Hans 60. günde 120 token sattı (95 → 97.5):
+```
+Yatırım: 120 × 95 = 11.400€
+Satış: 120 × 97.5 = 11.700€
+Brüt kar: 300€
+İkincil komisyon (Hans öder): 11.700 × 0.25% = 29.25€
+Net Hans karı: 270.75€
+60 günde %2.4 → yıllık %14.5 APY
+```
+
+Vadeye tutan yatırımcı (örn. Erkin):
+```
+Yatırım: 60 × 97.5 = 5.850€ (60. günde Hans'tan aldı)
+Vade ödemesi: 60 × 100 = 6.000€
+Net: 150€ kar
+60 günde %2.6 → yıllık %15.5 APY
+```
+
+## Sigorta Stake'çisi Tarafı
+
+```
+Pool toplam 100.000€ stake
+Bir fatura'dan sigorta payı: 238€
+Aylık 100 fatura → 100 × 238 = 23.800€/ay sigorta geliri
+Yıllık 285.600€
+
+Stake'çi APY = 285.600 / 100.000 = %285 brüt (default'suz)
+
+Default rate %0.5 olursa:
+  Aylık 100 × 0.5% = 0.5 default × 50.000€ = 25.000€ default
+  Sigorta tarafından ödenen yıllık: 300.000€
+  Net stake'çi: 285.600 - 300.000 = -14.400€ (zarar)
+```
+
+`★ Insight ─────────────────────────────────────`
+Stake'çinin karlı olması için **(default rate × nominal kayıp) < komisyon geliri** olmalı. Bu ancak buyer rating'i sıkı tutulursa mümkün. Bu yüzden A/B rating filtresi sadece yatırımcı için değil, **sigorta sürdürülebilirliği için kritik**.
+`─────────────────────────────────────────────────`
+
+## Aylık Volüm Senaryoları
+
+### Senaryo 1: 10 fatura/ay
+```
+Volume: 500.000€/ay
+Platform: 5.000€/ay
+Yıllık: 60.000€ revenue
+```
+
+### Senaryo 2: 100 fatura/ay
+```
+Volume: 5M€/ay
+Platform: 50.000€/ay
+Yıllık: 600.000€ revenue
+```
+
+### Senaryo 3: 1000 fatura/ay (Phase 2)
+```
+Volume: 50M€/ay
+Platform: 500.000€/ay
+Yıllık: 6M€ revenue
+```
+
+## Maliyet Yapısı
+
+| Maliyet | MVP | Phase 2 |
+|---|---|---|
+| Smart contract gas (relayer) | ~50€/ay | ~500€/ay |
+| Server (DigitalOcean) | 50€/ay | 500€/ay |
+| MongoDB Atlas | 0 (free) | 100€/ay |
+| GİB API entegrasyonu | 0 (mock) | ~5k/yıl |
+| Audit (one-time) | 0 | ~50k EUR |
+| Geliştirici (3 kişi) | 0 (kurucular) | ~150k/yıl |
+| Compliance + legal | 0 | ~30k/yıl |
+| Marketing | 0 | ~50k/yıl |
+
+Phase 2 break-even: yıllık ~300k EUR cost → ~50 fatura/ay break-even.
+
+## Comparison Tablosu
+
+| Platform | Fee | Speed | Coverage |
+|---|---|---|---|
+| Banka kredisi | %40-45 faiz | 2 hafta | Türkiye |
+| Geleneksel faktoring | %15-20 | 3-5 gün | Türkiye |
+| Polytrade | %2-5 | Anlık | Global |
+| Huma Finance | %3-7 | Anlık | Global, kurumsal |
+| **FaturaChain** | **%1.5-2** | **Anlık** | **Global, KOBİ** |
+
+## TÜBİTAK 1512 Bütçe Modeli
+
+Phase 2 için TÜBİTAK 1512 başvurusu:
+- Toplam bütçe talep: ~500k TL
+- Süre: 12 ay
+- Hedef: 100 KOBİ pilot, 1000 yatırımcı, 5M€ volüm
+- Çıktı: BDDK lisans hazırlığı, mainnet deploy

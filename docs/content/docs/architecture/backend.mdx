@@ -1,0 +1,200 @@
+---
+title: Backend Mimarisi
+description: Express + Mongoose + off-chain matching engine
+---
+
+# Backend Mimarisi
+
+Backend'in 3 ana sorumluluğu var:
+1. **REST API** — frontend'e veri sunmak
+2. **Matching Engine** — bid/ask eşleştirip kontrata göndermek
+3. **Event Listener** — kontrat eventlerini DB'ye yansıtmak
+
+## REST API Endpoint'leri
+
+```
+POST   /api/invoices                Yeni fatura draft
+POST   /api/invoices/:id/list       NFT mint sonrası listeleme
+GET    /api/invoices/:id            Detay
+GET    /api/marketplace             Aktif fatura listesi (filter)
+
+POST   /api/orders                  Yeni bid/ask
+DELETE /api/orders/:id              Cancel
+GET    /api/orderbook/:invoiceId    Order book snapshot
+
+GET    /api/portfolio/:address      Yatırımcı pozisyonları
+GET    /api/trades/:invoiceId       Trade history
+
+POST   /api/gib/verify              Mock GİB doğrulama
+GET    /api/buyers/:name/rating     Buyer credit rating
+
+GET    /api/insurance/stats         Pool size, APY
+```
+
+## Matching Engine
+
+`backend/src/matching/engine.ts`:
+
+```typescript
+class MatchingEngine {
+  private books = new Map<string, OrderBook>();
+  
+  async placeOrder(order: Order) {
+    const book = this.getBook(order.invoiceId);
+    book.add(order);
+    
+    while (this.canMatch(book)) {
+      const trade = this.match(book);
+      await this.settle(trade);
+      this.broadcast(book);
+    }
+    
+    await this.persist(book);
+  }
+  
+  private canMatch(book: OrderBook) {
+    const bestBid = book.bids[0];
+    const bestAsk = book.asks[0];
+    return bestBid && bestAsk && bestBid.price >= bestAsk.price;
+  }
+  
+  private match(book: OrderBook) {
+    const bid = book.bids[0];
+    const ask = book.asks[0];
+    const qty = Math.min(bid.remaining, ask.remaining);
+    const price = ask.price; // maker price
+    
+    bid.remaining -= qty;
+    ask.remaining -= qty;
+    
+    if (bid.remaining === 0) book.bids.shift();
+    if (ask.remaining === 0) book.asks.shift();
+    
+    return { bid, ask, qty, price };
+  }
+  
+  private async settle(trade: Trade) {
+    // Submit to OrderBook.sol contract
+    const tx = await this.contracts.orderBook.executeTrade(
+      trade.invoiceId,
+      trade.bid.maker,
+      trade.ask.maker,
+      trade.qty,
+      parseUnits(trade.price.toString(), 6)
+    );
+    await tx.wait();
+    
+    await Trade.create({
+      invoiceId: trade.invoiceId,
+      buyer: trade.bid.maker,
+      seller: trade.ask.maker,
+      qty: trade.qty,
+      price: trade.price,
+      txHash: tx.hash,
+      timestamp: new Date(),
+    });
+  }
+}
+```
+
+## Event Listener
+
+```typescript
+// backend/src/listeners/orderbook.ts
+const contract = new ethers.Contract(addr, abi, provider);
+
+contract.on('Trade', async (invoiceId, buyer, seller, qty, price) => {
+  // Match engine'in zaten oluşturduğu trade ile reconcile
+  await Trade.findOneAndUpdate(
+    { invoiceId, buyer, seller, qty, price },
+    { confirmed: true, blockNumber: ev.blockNumber }
+  );
+  
+  io.to(`invoice:${invoiceId}`).emit('trade:new', {...});
+});
+
+contract.on('OrderPlaced', async (...) => {...});
+contract.on('OrderCancelled', async (...) => {...});
+contract.on('Default', async (...) => {...});
+```
+
+## Data Models (Mongoose)
+
+```typescript
+// models/invoice.ts
+const InvoiceSchema = new Schema({
+  sellerAddress: { type: String, required: true, index: true },
+  buyerName: String,
+  buyerAddress: String,
+  amount: Number,
+  currency: String,
+  dueDate: Date,
+  totalTokens: Number,
+  tokenId: Number,
+  status: { type: String, enum: ['draft', 'minted', 'listed', 'matured', 'defaulted'] },
+  buyerRating: String,
+  gibVerified: Boolean,
+  createdAt: { type: Date, default: Date.now },
+});
+
+// models/order.ts
+const OrderSchema = new Schema({
+  invoiceId: { type: ObjectId, index: true },
+  type: { type: String, enum: ['bid', 'ask'] },
+  isSecondary: Boolean,
+  maker: String,
+  price: Number,
+  originalQty: Number,
+  remainingQty: Number,
+  status: { type: String, enum: ['active', 'filled', 'cancelled'] },
+  createdAt: Date,
+});
+
+// models/trade.ts
+const TradeSchema = new Schema({
+  invoiceId: ObjectId,
+  buyer: String,
+  seller: String,
+  qty: Number,
+  price: Number,
+  txHash: String,
+  blockNumber: Number,
+  timestamp: Date,
+  isSecondary: Boolean,
+});
+```
+
+## WebSocket Channels
+
+```
+- orderbook:{invoiceId}    Order book updates
+- trade:new                New trade notifications
+- invoice:listed           New invoice on marketplace
+- invoice:default          Default declaration
+- portfolio:{address}      User-specific updates
+```
+
+## GİB Mock Service
+
+```typescript
+// services/gib.ts
+export async function verifyInvoice(input: GibInput): Promise<GibResult> {
+  // MVP: random success + mock rating
+  await sleep(500);
+  
+  if (input.invoiceNumber.endsWith('FAIL')) {
+    return { valid: false, reason: 'Çift finansman tespit edildi' };
+  }
+  
+  return {
+    valid: true,
+    mfksUnique: true,
+    buyerRating: BUYER_RATINGS[input.buyerName] ?? 'B',
+  };
+}
+
+const BUYER_RATINGS: Record<string, string> = {
+  'Lidl': 'A', 'Zara': 'A', 'Bosch': 'A',
+  'Carrefour': 'B', 'Auchan': 'B',
+};
+```

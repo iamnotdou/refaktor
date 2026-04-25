@@ -1,0 +1,13 @@
+{
+  "title": "Kullanıcı Tipleri",
+  "pages": [
+    "kobi",
+    "primary-investor",
+    "secondary-trader",
+    "institutional",
+    "liquidity-provider",
+    "insurance-staker",
+    "platform-admin",
+    "auditor"
+  ]
+}

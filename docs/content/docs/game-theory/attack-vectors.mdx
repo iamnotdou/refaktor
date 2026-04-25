@@ -1,0 +1,160 @@
+---
+title: Saldırı Vektörleri
+description: Manipülasyon ve adversarial oyunlar — koruma stratejileri
+---
+
+# Saldırı Vektörleri
+
+Sisteme karşı potansiyel adversarial oyunlar. Her birine **hangi mekanizma** karşı koyuyor.
+
+## 1. Wash Trading
+
+**Saldırı:** Kullanıcı kendi cüzdanından kendi token'ını kendine satar — fake hacim yaratır, fiyat manipüle eder.
+
+**Niye?** Daha sonra "yüksek hacimli" görünen tokenı dışarıya pahalıya satmak için.
+
+**Korunma:**
+- Aynı IP'den birden fazla cüzdan tespiti
+- Same-block aynı invoice için bid+ask koyamaz
+- KYC bağlama — bir kişi tek cüzdan
+- AI anomali tespiti (Phase 2)
+
+```
+Detect: bid.maker == ask.maker (same address)
+Detect: bid.maker.kyc == ask.maker.kyc (different addresses, same person)
+```
+
+## 2. Sandwich Attack (MEV)
+
+**Saldırı:** Saldırgan, büyük bid'in ön/arkasına kendi emirini koyar — ortadaki ödülü slippage'la alır.
+
+```
+1. Saldırgan büyük bid'i mempool'da görür (Hans 100 token, 95.5€)
+2. Saldırgan front-run: kendi bid 95.6€ × 100
+3. Hans'ın bid'i mempool'dan match olur ama ask doluydu
+4. Saldırgan back-run: kendi ask 95.55€ koyar, Hans'ın geriye kalanına satar
+```
+
+**Korunma:**
+- Hibrit OB (off-chain matching) MEV'i azaltır
+- Backend matcher private — public mempool'da emir görünmez
+- Phase 2: encrypted mempool (Flashbots tarzı)
+
+## 3. Spoofing (Sahte Emir)
+
+**Saldırı:** Pazara büyük emir koyup fiyatı manipüle eder, sonra iptal eder.
+
+```
+1. Spoofer 200 token × 90€ ask koyar (sahte ucuz)
+2. Yatırımcılar paniklemiyle düşük bid verir
+3. Spoofer ask'ı iptal eder
+4. Spoofer ucuz bid'lerden alır → kar
+```
+
+**Korunma:**
+- Cancel cost — minimum gas ücreti
+- Cancel rate limit (1 dk'da max 5 cancel)
+- "Suspicious cancel" admin alarm
+- Phase 2: cancel için stake required
+
+## 4. Reentrancy
+
+**Saldırı:** Kontrat fonksiyonu external call yapıyorsa saldırgan tekrar çağırarak state'i bozabilir.
+
+**Korunma:**
+- OpenZeppelin `ReentrancyGuard` her external state-changing fonksiyonda
+- CEI pattern (Checks-Effects-Interactions)
+- Audit gerekli (Phase 2)
+
+## 5. Oracle Manipulation
+
+**Saldırı:** Vade ödeme bilgisini veren oracle'ı kandırarak default'u "ödendi" gibi gösterme.
+
+**Korunma:**
+- MVP'de admin manuel — multisig 2/3
+- Phase 2: Chainlink Functions + multiple data sources
+- Time-lock (24h) markPaid kararına
+
+## 6. Sybil Saldırısı
+
+**Saldırı:** Bir kişi 100 cüzdan oluşturup whitelisted KOBİ rolüne girer.
+
+**Korunma:**
+- KYC zorunlu (kimlik doğrulama)
+- Tax ID benzersizlik kontrolü
+- Wallet bağlama (POAP, Worldcoin Phase 3)
+
+## 7. Front-Running KOBİ
+
+**Saldırı:** Saldırgan KOBİ'nin yeni fatura listeleyeceğini öğrenip pazara ön emir koyar.
+
+**Korunma:**
+- Backend listing önce off-chain queue'ya gider
+- Random delay (jitter) listing'de
+- Phase 2: commit-reveal scheme
+
+## 8. Pump and Dump
+
+**Saldırı:** Grup koordineli olarak bir invoice'i pump eder, retail yatırımcıları çeker, dump eder.
+
+**Korunma:**
+- Bireysel fatura miktarı sınırlı (≤500k EUR)
+- Suspicious volume detection
+- KYC ile bireyleri ayırma
+
+## 9. Default Olmamış Faturayı Default İlan Etme
+
+**Saldırı:** Admin yanlış bilgiyle default ilan eder (kazara veya kasıtlı).
+
+**Korunma:**
+- Admin multisig (3/5 imza)
+- 7 günlük dispute window — KOBİ veya yatırımcı itiraz edebilir
+- Insurance ödeme öncesinde 48h timelock
+
+## 10. Smart Contract Bug
+
+**Saldırı:** Yazılım hatası — örn. integer overflow, reentrancy, access control eksikliği.
+
+**Korunma:**
+- Solidity 0.8.x (overflow check default)
+- OpenZeppelin standard kontratlar
+- Hardhat coverage >80%
+- Slither + Mythril static analysis
+- External audit (Phase 2 öncesi şart)
+
+## 11. Centralized Backend (Sansür Riski)
+
+**Saldırı:** Backend matcher belirli kullanıcıyı eşleştirmez (sansür).
+
+**Korunma:**
+- Phase 2: Multiple relayers
+- Phase 3: Decentralized sequencer
+
+## 12. KYC Veri Sızıntısı
+
+**Saldırı:** Backend hacklenir, KOBİ KYC bilgileri çalınır.
+
+**Korunma:**
+- Encrypted at rest (DB level)
+- Minimal data — sadece gerekli
+- KVKK/GDPR uyumlu silme süreçleri
+- Penetration test (Phase 2)
+
+## Hackathon MVP'de Hangileri Var?
+
+| Saldırı | MVP koruma | Phase 2'de eklenir |
+|---|---|---|
+| Wash trading | ❌ | KYC tespiti |
+| Sandwich | ✅ (off-chain match) | Encrypted mempool |
+| Spoofing | ❌ | Rate limit |
+| Reentrancy | ✅ (OZ guard) | — |
+| Oracle | ✅ (admin) | Chainlink |
+| Sybil | ❌ | KYC |
+| Front-running KOBİ | ❌ | Commit-reveal |
+| Pump-dump | ❌ | Volume cap |
+| Wrong default | ⚠️ (single admin) | Multisig |
+| Contract bug | ✅ (OZ) | External audit |
+
+## Jüriye Mesaj
+
+> "MVP saldırı yüzeyini bilinçli daralttık — single admin, mock GİB, public mempool. Production'da decentralized matcher, multisig, encrypted mempool, eksternal audit ve KYC zorunlu. **Tehdit modeli farkındalığımız var** ve Phase 2 yol haritasında her saldırı için karşılık tasarladık."

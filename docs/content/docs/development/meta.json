@@ -1,0 +1,10 @@
+{
+  "title": "Geliştirme",
+  "pages": [
+    "setup",
+    "monorepo-structure",
+    "contracts-submodule",
+    "deployment",
+    "testing"
+  ]
+}

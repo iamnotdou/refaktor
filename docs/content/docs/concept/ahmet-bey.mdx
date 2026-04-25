@@ -1,0 +1,54 @@
+---
+title: Ahmet Bey Hikayesi
+description: 50.000€'luk Lidl faturasının tokenizasyonu — somut end-to-end akış
+---
+
+# Ahmet Bey Hikayesi
+
+Ahmet Bey'in Bursa'da tekstil fabrikası var. Almanya'daki Lidl'e **50.000€'luk kumaş** sattı. Lidl 120 gün sonra ödeyecek. Ahmet Bey'in nakde ihtiyacı var.
+
+## 10 Adımda Akış
+
+| # | Ne Oluyor | Kim Yapıyor | Süre |
+|---|---|---|---|
+| 1 | Fatura yükleniyor | KOBİ (Ahmet Bey) | 2 dk |
+| 2 | GİB e-Fatura API + MFKS doğrulama | Platform (otomatik) | 30 sn |
+| 3 | Fatura 500 tokena bölünüyor (NFT) | Smart Contract | 10 sn |
+| 4 | KOBİ ask price belirliyor | KOBİ | 1 dk |
+| 5 | Tokenler açık pazarda listeleniyor | Platform | Anlık |
+| 6 | Yatırımcılar bid veriyor veya direkt alıyor | Global yatırımcılar | Sürekli |
+| 7 | Eşleşen emirlerde token el değiştiriyor | Smart Contract (matching) | Anlık |
+| 8 | KOBİ satılan tokenların USDC'sini alıyor | Smart Contract → KOBİ | Anlık |
+| 9 | Yatırımcı vade dolmadan ikincil piyasada satabilir | Yatırımcı → Yatırımcı | İstediği zaman |
+| 10 | Vade dolunca Lidl ödüyor, token sahiplerine dağıtılıyor | Smart Contract | 120 gün sonra |
+
+## Order Book Örneği
+
+50.000€ fatura, 500 token, nominal **100€/token**. Ahmet Bey ask = **95€**.
+
+**Bid Side (alış)** | **Ask Side (satış)**
+---|---
+95.8€ × 120 — Hans, Berlin | 95.0€ × 500 — Ahmet Bey (birincil)
+95.2€ × 200 — Sara, Dubai  | 97.5€ × 80 — Mehmet (ikincil, 60. gün)
+94.0€ × 300 — Mehmet, İstanbul | 98.0€ × 50 — Sara (ikincil, 90. gün)
+
+### Eşleşme
+
+- Hans 95.8€ ≥ Ahmet 95€ → **120 token** anlık el değiştiriyor
+- Sara 95.2€ ≥ Ahmet 95€ → **200 token** daha eşleşiyor
+- Mehmet 94€ < Ahmet 95€ → bekliyor
+
+### Ahmet Bey'in Aldığı
+
+```
+120 × 95.8 + 200 × 95.2 = 11.496 + 19.040 = 30.536€ anlık nakit
+```
+
+Kalan 180 token pazarda; daha fazla yatırımcı geldiğinde satılacak.
+
+## Sonuç
+
+- 120 gün beklemek yerine **dakikalar içinde** %60 nakit
+- Geleneksel faktoringden **%14 daha az komisyon**
+- Lidl 120 gün sonra ödediğinde token sahipleri %100 nominal alıyor
+- İkincil piyasada Hans 60. günde isterse %97.5'e satıp çıkabilir
