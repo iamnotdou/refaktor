@@ -8,6 +8,7 @@ const links = [
   { href: "/marketplace", label: "Marketplace" },
   { href: "/upload", label: "Mint Invoice" },
   { href: "/portfolio", label: "Portfolio" },
+  { href: "/faucet", label: "Faucet" },
   { href: "/admin", label: "Admin" },
 ];
 

@@ -1,4 +1,4 @@
-import deployment from "../../../refaktor-sc/deployments/baseSepolia.json";
+import deployment from "./deployment.json";
 import { loadDeployment, type SupportedChainId } from "@refaktor/sdk";
 
 export const CHAIN_ID = Number(

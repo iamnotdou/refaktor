@@ -1,6 +1,3 @@
-[submodule "refaktor-sc"]
-	path = refaktor-sc
-	url = https://github.com/kkayam/refaktor-sc.git
 [submodule "refaktor-indexer"]
 	path = refaktor-indexer
 	url = https://github.com/iamnotdou/refaktor-indexer.git
