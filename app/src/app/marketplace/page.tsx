@@ -4,6 +4,16 @@ import Link from "next/link";
 import { useMarketplace } from "@refaktor/sdk/react";
 import type { InvoiceFromIndexer } from "@refaktor/sdk";
 import { fmtUsdc, fmtPrice } from "@/lib/format";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 
 export default function MarketplacePage() {
   const { data, isLoading, error } = useMarketplace({ status: "Listed" });
@@ -12,37 +22,41 @@ export default function MarketplacePage() {
     <div className="max-w-6xl mx-auto px-6 py-10">
       <div className="flex items-end justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Marketplace</h1>
-          <p className="text-sm text-zinc-500 mt-1">
+          <h1 className="font-heading text-3xl font-semibold tracking-tight">
+            Marketplace
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Aktif tokenize faturalar — indexer’dan canlı veri.
           </p>
         </div>
       </div>
 
       {error ? (
-        <Banner kind="error">
-          Indexer’a ulaşılamadı: {(error as Error).message}. NEXT_PUBLIC_INDEXER_URL
-          ayarlandığından ve Hasura’nın 8080’de çalıştığından emin ol.
-        </Banner>
+        <Card size="sm" className="mb-6 ring-destructive/40 bg-destructive/5">
+          <CardContent className="text-sm text-destructive">
+            Indexer’a ulaşılamadı: {(error as Error).message}.
+            NEXT_PUBLIC_INDEXER_URL ayarlandığından ve Hasura’nın 8080’de
+            çalıştığından emin ol.
+          </CardContent>
+        </Card>
       ) : null}
 
       {isLoading ? (
-        <div className="text-zinc-500">Yükleniyor…</div>
+        <div className="text-muted-foreground">Yükleniyor…</div>
       ) : !data || data.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 p-12 text-center">
-          <p className="text-zinc-600 dark:text-zinc-400">
-            Henüz listelenmiş fatura yok.
-          </p>
-          <Link
-            href="/upload"
-            className="inline-block mt-4 px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
-          >
-            İlk faturayı mint et
-          </Link>
-        </div>
+        <Card className="border-dashed ring-dashed">
+          <CardContent className="py-12 text-center space-y-4">
+            <p className="text-muted-foreground">
+              Henüz listelenmiş fatura yok.
+            </p>
+            <Button asChild>
+              <Link href="/upload">İlk faturayı mint et</Link>
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {data.map(inv => (
+          {data.map((inv) => (
             <InvoiceCard key={inv.id} inv={inv} />
           ))}
         </div>
@@ -53,33 +67,40 @@ export default function MarketplacePage() {
 
 function InvoiceCard({ inv }: { inv: InvoiceFromIndexer }) {
   const remaining = inv.totalShares - inv.filledShares;
-  const fillPct = Number((inv.filledShares * 10000n) / (inv.totalShares || 1n)) / 100;
+  const fillPct =
+    Number((inv.filledShares * 10000n) / (inv.totalShares || 1n)) / 100;
   return (
-    <Link
-      href={`/invoice/${inv.invoiceId}`}
-      className="block rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 hover:border-blue-400 transition"
-    >
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
-          #{inv.invoiceId.toString()}
-        </span>
-        <span className="text-xs text-zinc-500">{inv.status}</span>
-      </div>
-      <div className="space-y-1.5 text-sm">
-        <Row k="Face value" v={`${fmtUsdc(inv.faceValue)} USDC`} />
-        <Row k="Total shares" v={inv.totalShares.toString()} />
-        <Row k="Remaining" v={remaining.toString()} />
-        <Row k="Primary VWAP" v={inv.primaryVwap ? `${fmtPrice(inv.primaryVwap)} USDC` : "—"} />
-      </div>
-      <div className="mt-4">
-        <div className="h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
-          <div
-            className="h-full bg-blue-500"
-            style={{ width: `${Math.min(100, fillPct)}%` }}
+    <Link href={`/invoice/${inv.invoiceId}`} className="group block">
+      <Card
+        size="sm"
+        className="transition hover:ring-2 hover:ring-primary/40 group-hover:-translate-y-0.5"
+      >
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <Badge>#{inv.invoiceId.toString()}</Badge>
+            <Badge variant="outline">{inv.status}</Badge>
+          </div>
+          <CardTitle className="font-mono text-base">
+            {fmtUsdc(inv.faceValue)} USDC
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-1.5 text-sm">
+          <Row k="Total shares" v={inv.totalShares.toString()} />
+          <Row k="Remaining" v={remaining.toString()} />
+          <Row
+            k="Primary VWAP"
+            v={
+              inv.primaryVwap ? `${fmtPrice(inv.primaryVwap)} USDC` : "—"
+            }
           />
-        </div>
-        <div className="text-[11px] text-zinc-500 mt-1">{fillPct.toFixed(1)}% filled</div>
-      </div>
+        </CardContent>
+        <CardFooter className="flex-col items-stretch gap-1.5">
+          <Progress value={Math.min(100, fillPct)} className="h-1.5" />
+          <div className="text-[11px] text-muted-foreground">
+            {fillPct.toFixed(1)}% filled
+          </div>
+        </CardFooter>
+      </Card>
     </Link>
   );
 }
@@ -87,18 +108,8 @@ function InvoiceCard({ inv }: { inv: InvoiceFromIndexer }) {
 function Row({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex justify-between">
-      <span className="text-zinc-500">{k}</span>
-      <span className="font-medium">{v}</span>
+      <span className="text-muted-foreground">{k}</span>
+      <span className="font-mono">{v}</span>
     </div>
-  );
-}
-
-function Banner({ kind, children }: { kind: "error" | "info"; children: React.ReactNode }) {
-  const cls =
-    kind === "error"
-      ? "bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 text-red-800 dark:text-red-200"
-      : "bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-900 text-blue-800 dark:text-blue-200";
-  return (
-    <div className={`mb-6 rounded-md border px-4 py-3 text-sm ${cls}`}>{children}</div>
   );
 }
