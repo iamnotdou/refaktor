@@ -3,6 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@9.12.0",
+  "pnpm": {
+    "overrides": {
+      "react": "19.2.4",
+      "react-dom": "19.2.4",
+      "@tanstack/react-query": "5.100.3"
+    }
+  },
   "scripts": {
     "build:sdk": "pnpm --filter @refaktor/sdk build",
     "test:sc": "pnpm --filter refaktor-sc test",
