@@ -7,10 +7,13 @@ Refaktör; Türkiye'nin ihracatçı KOBİ'leriyle dünyanın her yerindeki yatı
 > **Bi-Thongo Web3 Hackathon — Biruni Teknopark, Nisan 2026** için geliştirilen MVP.
 > Ağ: **Base Sepolia** · Stable: **MockUSDC** (6 decimals) · Tüm işlemler on-chain.
 
+**Sunum:** [Refaktör Pitch Deck (Google Slides)](https://docs.google.com/presentation/d/e/2PACX-1vQtH8esDxs2epCd2cuRyMfgLd0H0_IBARKX0TKgSiVHohnUivwAptNr7EARClUBeegLoLvPe7gF-nBE/pub?start=true&loop=false&delayms=60000&slide=id.p4)
+
 ---
 
 ## İçindekiler
 
+- [Sunum](#sunum)
 - [Çözdüğü Problem](#çözdüğü-problem)
 - [Protokol Nasıl Çalışır?](#protokol-nasıl-çalışır)
 - [Canlı Dağıtım (Base Sepolia)](#canlı-dağıtım-base-sepolia)
@@ -20,6 +23,14 @@ Refaktör; Türkiye'nin ihracatçı KOBİ'leriyle dünyanın her yerindeki yatı
 - [Geliştirme Ortamı](#geliştirme-ortamı)
 - [Teknoloji Yığını](#teknoloji-yığını)
 - [Demo Senaryosu](#demo-senaryosu)
+
+---
+
+## Sunum
+
+Hackathon pitch sunumu (Google Slides, otomatik yayın):
+
+[**Refaktör — Pitch Deck**](https://docs.google.com/presentation/d/e/2PACX-1vQtH8esDxs2epCd2cuRyMfgLd0H0_IBARKX0TKgSiVHohnUivwAptNr7EARClUBeegLoLvPe7gF-nBE/pub?start=true&loop=false&delayms=60000&slide=id.p4)
 
 ---
 
