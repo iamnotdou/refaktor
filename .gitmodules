@@ -7,3 +7,6 @@
 [submodule "refaktor-sdk"]
 	path = refaktor-sdk
 	url = https://github.com/iamnotdou/refaktor-sdk.git
+[submodule "docs"]
+	path = docs
+	url = https://github.com/iamnotdou/refaktor-docs.git
