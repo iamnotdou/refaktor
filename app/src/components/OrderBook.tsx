@@ -77,6 +77,39 @@ export function OrderBookPanel({ invoiceId, originalSeller }: Props) {
     if (!address) return toast.error("Wallet bağla");
     setBusy("bid");
     try {
+      const price = parsePricePerShare(bidPrice);
+      const qty = BigInt(bidQty);
+      const cost = qty * price;
+
+      const balance = (await publicClient!.readContract({
+        address: ADDRESSES.usdc,
+        abi: MockUSDCAbi,
+        functionName: "balanceOf",
+        args: [address],
+      })) as bigint;
+      if (balance < cost) {
+        throw new Error(
+          `Yetersiz USDC bakiyesi: ${balance} < ${cost}. /faucet adresinden mint et.`
+        );
+      }
+
+      const allowance = (await publicClient!.readContract({
+        address: ADDRESSES.usdc,
+        abi: MockUSDCAbi,
+        functionName: "allowance",
+        args: [address, ADDRESSES.orderBook],
+      })) as bigint;
+      if (allowance < cost) {
+        toast.message("USDC approve gerekli…");
+        const hash = await writeContractAsync({
+          address: ADDRESSES.usdc,
+          abi: MockUSDCAbi,
+          functionName: "approve",
+          args: [ADDRESSES.orderBook, cost],
+        });
+        await publicClient!.waitForTransactionReceipt({ hash });
+      }
+
       await fetch(`/api/orders/${invoiceId}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -84,7 +117,7 @@ export function OrderBookPanel({ invoiceId, originalSeller }: Props) {
           side: "bid",
           maker: address,
           qty: bidQty,
-          pricePerShare: parsePricePerShare(bidPrice).toString(),
+          pricePerShare: price.toString(),
         }),
       });
       await reload();
